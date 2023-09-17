@@ -47,7 +47,7 @@ fn main() {
             count += 1;
         }
         let end_time = Instant::now();
-        let elapsed_time = (end_time - start_time);
+        let elapsed_time = end_time - start_time;
         println!("Count: {}, Elapsed time: {:?}", total, elapsed_time);
     }
 }
