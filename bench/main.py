@@ -24,7 +24,7 @@ def main():
     with open("data/鲁迅全集.txt", "r") as f:
         text = f.read()
     
-    normalized_text = unicodedata.normalize('NFC', text)
+    normalized_text = unicodedata.normalize("NFC", text)
     for total in [100, 1000, 10000, 100000]:
         text = normalized_text[:total]
         byte_text = text.encode()
