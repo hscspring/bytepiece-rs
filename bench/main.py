@@ -34,7 +34,7 @@ def main():
             count += 1
         end_time = time.time()
         elapsed_time = (end_time - start_time) * 1000;
-        print(f"Count: {total} ms, Elapsed time: {elapsed_time}")
+        print(f"Count: {total}, Elapsed time: {elapsed_time} ms")
 
     
 
