@@ -32,7 +32,8 @@ fn main() {
         let token = Bytes::from(token_u8);
         patterns.push(token.clone());
     }
-    let aho = AhoCorasick::new(patterns).unwrap();
+    patterns.sort();
+    let aho = AhoCorasick::new(&patterns).unwrap();
     let file_path = current_dir.join("data/鲁迅全集.txt");
     let mut file = File::open(file_path).unwrap();
     let mut text = String::new();
