@@ -17,5 +17,5 @@ from rs_bytepiece import Tokenizer
 tokenizer = Tokenizer()
 output = tokenizer.encode("今天天气不错")
 print(output)
-# []
+# [40496, 45268, 39432]
 ```
