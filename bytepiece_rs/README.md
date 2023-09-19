@@ -24,7 +24,7 @@ cargo bench -- --plotting-backend gnuplot
 
 The result as follows:
 
-| StringLength | alpha | AverageTime | Throughput   |
+| TextLength | alpha | AverageTime | Throughput   |
 | ------------ | ----- | ----------- | ------------ |
 | 100          | 0.0   | 55.411 µs   | 1.7211 MiB/s |
 |              | 0.1   | 68.615 µs   | 1.3899 MiB/s |
