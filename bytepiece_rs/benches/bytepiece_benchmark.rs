@@ -12,7 +12,7 @@ lazy_static! {
 
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("bytepiecefrom_len_without_alpha");
+    let mut group = c.benchmark_group("bytepiece_diff_len_alpha");
     for size in [100, 1000, 10000, 100000].iter() {
         let text = &TEXT.chars().take(*size).collect::<String>();
         for alpha in [0.0, 0.1].iter() {

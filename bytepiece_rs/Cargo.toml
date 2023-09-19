@@ -1,6 +1,6 @@
 [package]
 name = "bytepiece_rs"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 authors = ["hscspring <haoshaochun@gmail.com>"]
 categories = ["text-processing", "deeplearning", "nlp"]
@@ -13,6 +13,7 @@ repository = "https://github.com/hscspring/bytepiece-rs"
 
 [dev-dependencies]
 criterion = "0.5"
+gnuplot = "0.0.39"
 
 
 [dependencies]
@@ -31,6 +32,7 @@ unic-normal = "0.9.0"
 name = "bytepiece_rs"
 path = "src/lib.rs"
 crate-type = ["lib"]
+bench = false
 
 [[bench]]
 name = "bytepiece_benchmark"
