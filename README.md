@@ -1,12 +1,12 @@
 # bytepiece
 
-Implementation of Su's [bytepiece](https://github.com/bojone/bytepiece) for performance.
+Implementation of Su's [bytepiece](https://github.com/bojone/bytepiece).
 
 
 ## Bindings
 
-- [Rust](https://github.com/hscspring/bytepiece-rs)
-- [Python](https://github.com/hscspring/bytepiece-rs)
+- [Rust](https://github.com/hscspring/bytepiece-rs/tree/main/bytepiece_rs)
+- [Python](https://github.com/hscspring/bytepiece-rs/tree/main/bindings/python)
 
 
 ## Quick Example using Python

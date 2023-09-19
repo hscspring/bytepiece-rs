@@ -1,4 +1,4 @@
-# bytepiece-rs
+# rs-bytepiece
 
 ## Install
 
