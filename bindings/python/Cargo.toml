@@ -1,0 +1,18 @@
+[package]
+name = "rs_bytepiece"
+version = "0.0.3"
+edition = "2021"
+authors = ["Yam(长琴) <haoshaochun@gmail.com>"]
+description = "bytepiece-rs Python binding"
+license = "MIT"
+repository = "https://github.com/hscspring/bytepiece-rs"
+readme = "README.md"
+
+
+[lib]
+name = "rs_bytepiece"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.19.2", features = ["extension-module", "abi3-py37"] }
+bytepiece_rs = "0.0.2"

@@ -1,0 +1,35 @@
+[build-system]
+requires = ["maturin>=1.2,<2.0"]
+build-backend = "maturin"
+
+
+[project]
+name = "rs_bytepiece"
+requires-python = ">=3.7"
+authors = [
+    {name = "Yam(长琴)", email = "haoshaochun@gmail.com"},
+]
+classifiers = [
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Intended Audience :: Science/Research",
+  "Operating System :: OS Independent",
+  "Programming Language :: Rust",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+keywords = ["NLP", "tokenizer", "bytepiece", "Deep Learning"]
+dynamic = [
+    "description",
+    "license",
+    "readme",
+]
+
+[project.urls]
+homepage = "https://github.com/hscspring/bytepiece-rs"
+documentation = "https://github.com/hscspring/bytepiece-rs"
+repository = "https://github.com/hscspring/bytepiece-rs"
+
+[tool.maturin]
+bindings = "pyo3"
+features = ["pyo3/extension-module"]
