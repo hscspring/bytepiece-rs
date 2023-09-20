@@ -79,7 +79,7 @@ impl<'a> Tokenizer {
     pub fn load_from(model_path: &str) -> Self {
         let mut ins = Self::init_empty();
         let model = load_model(model_path);
-        ins.build_model(model.as_str()).unwrap();
+        ins.build_model(&model).unwrap();
         ins
     }
 
@@ -125,12 +125,10 @@ impl<'a> Tokenizer {
 
     fn tokenize_bytes(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<&'a [u8]> {
         let mut tokens = vec![];
-        let mut scores: Vec<f64> = vec![0.0];
-        let mut routes: Vec<usize> = vec![0];
-        for (i, _char_byte) in text_bytes.iter().enumerate() {
-            scores.push(NEG_INFINITY);
-            routes.push(i);
-        }
+        let len = text_bytes.len() + 1;
+        let mut scores: Vec<f64> = vec![NEG_INFINITY; len];
+        scores[0] = 0.0;
+        let mut routes: Vec<usize> = (0..len).collect();
         for mat in self.automaton.as_ref().unwrap().find_overlapping_iter(text_bytes.as_ref()) {
             let mat_u8 = &text_bytes[mat.start().. mat.end()];
             let mut score = self.token_to_score[mat_u8];
@@ -143,7 +141,7 @@ impl<'a> Tokenizer {
                 routes[mat.end()] = mat.start();
             }
         }
-        let mut end = text_bytes.len();
+        let mut end = len - 1;
         while end > 0 {
             let start = routes[end];
             let byte_token = &text_bytes[start..end];
@@ -154,30 +152,25 @@ impl<'a> Tokenizer {
         tokens
     }
 
-    pub fn tokenize(&'a self, text: &str, alpha: f64) -> Vec<Vec<u8>> {
+    pub fn tokenize(&'a self, text: &str, alpha: f64) -> Vec<usize> {
         let text = text.nfc().collect::<String>();
         let text_list = normalize(&text);
-        let mut tokens = vec![];
+        let mut token_ids = vec![];
         for p in text_list {
             let token_bytes = self.tokenize_bytes(p.as_bytes(), alpha);
-            for token_byte in token_bytes {
-                tokens.push(token_byte.to_owned());
+            for &x in token_bytes.iter() {
+                token_ids.push(self.token_to_ids[x]);
             }
         }
-        tokens
+        token_ids
     }
 
     pub fn encode(
         &self, text: &str, add_bos: bool, add_eos: bool, alpha: f64,
     ) -> Vec<usize> {
-        let tokens = self.tokenize(text, alpha);
-        let mut token_ids = vec![];
+        let mut token_ids = self.tokenize(text, alpha);
         if add_bos {
-            token_ids.push(1);
-        }
-        for token in tokens {
-            let token_id = self.token_to_ids[&token];
-            token_ids.push(token_id);
+            token_ids.insert(0, 1);
         }
         if add_eos {
             token_ids.push(2);
