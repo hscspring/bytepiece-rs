@@ -5,16 +5,15 @@ use unic_normal::StrNormalForm;
 use regex::Regex;
 use lazy_static::lazy_static;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
-use bytes::Bytes;
 use base64::{Engine as _, engine::general_purpose};
 use serde_json;
 use serde::Deserialize;
 use serde_json::Result;
 
 
-type TokenMap = HashMap<Bytes, usize>;
-type IdMap = HashMap<usize, Bytes>;
-type Token2ScoreMap = HashMap<Bytes, f64>;
+type TokenMap = HashMap<Vec<u8>, usize>;
+type IdMap = HashMap<usize, Vec<u8>>;
+type Token2ScoreMap = HashMap<Vec<u8>, f64>;
 
 
 static DEFAULT_MODEL: &str = include_str!("model/bytepiece_80k.model");
@@ -27,17 +26,11 @@ pub fn load_model(path: &str) -> String {
 }
 
 
-pub fn normalize(text: &str) -> Vec<String>  {
+pub fn normalize(text: &str) -> Vec<&str>  {
     lazy_static! {
         static ref RE: Regex = Regex::new(r".*\n+|.+").unwrap();
     }
-    let normalized_text = text.nfc().collect::<String>();
-    let mut text_list: Vec<String> = Vec::new();
-    for mat in RE.find_iter(&normalized_text) {
-        let part = mat.as_str();
-        text_list.push(part.to_owned());
-    }
-    text_list
+    RE.find_iter(text).map(|mat| mat.as_str()).collect()
 }
 
 pub fn random() -> f64 {
@@ -72,7 +65,7 @@ struct ModelData {
 }
 
 
-impl Tokenizer {
+impl<'a> Tokenizer {
 
     pub fn init_empty() -> Self {
         Tokenizer {
@@ -98,21 +91,20 @@ impl Tokenizer {
 
     fn build_model(& mut self, model_content: &str) -> Result<()> {
         let model: HashMap<String, ModelData> = serde_json::from_str(model_content)?;
-        let mut patterns: Vec<Bytes> = Vec::new();
+        let mut patterns: Vec<Vec<u8>> = Vec::new();
         let mut total_freq: usize = 0;
         let special_tokens = ["<pad>", "<bos>", "<eos>"];
 
         for (i, spe_token) in special_tokens.iter().enumerate() {
-            self.token_to_ids.insert(Bytes::from(spe_token.to_owned()), i);
-            self.id_to_tokens.insert(i, Bytes::from(spe_token.to_owned()));
+            self.token_to_ids.insert(spe_token.as_bytes().to_vec(), i);
+            self.id_to_tokens.insert(i, spe_token.as_bytes().to_vec());
         }
         for (key, value) in model {
             let token_u8 = general_purpose::STANDARD.decode(key.as_str()).unwrap();
-            let token = Bytes::from(token_u8);
-            patterns.push(token.clone());
-            self.token_to_ids.insert(token.clone(), value.id);
-            self.id_to_tokens.insert(value.id, token.clone());
-            self.token_to_score.insert(token.clone(), (value.freq as f64).ln());
+            patterns.push(token_u8.clone());
+            self.token_to_ids.insert(token_u8.clone(), value.id);
+            self.id_to_tokens.insert(value.id, token_u8.clone());
+            self.token_to_score.insert(token_u8.clone(), (value.freq as f64).ln());
             total_freq += value.freq;
         }
         let log_total = (total_freq as f64).ln();
@@ -131,7 +123,7 @@ impl Tokenizer {
         Ok(())
     }
 
-    fn tokenize_bytes(&self, text_bytes: Bytes, alpha: f64) -> Vec<Bytes> {
+    fn tokenize_bytes(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<&'a [u8]> {
         let mut tokens = vec![];
         let mut scores: Vec<f64> = vec![0.0];
         let mut routes: Vec<usize> = vec![0];
@@ -140,9 +132,8 @@ impl Tokenizer {
             routes.push(i);
         }
         for mat in self.automaton.as_ref().unwrap().find_overlapping_iter(text_bytes.as_ref()) {
-            let mat_u8 = text_bytes[mat.start().. mat.end()].to_owned();
-            let mat_bytes = Bytes::from(mat_u8);
-            let mut score = self.token_to_score[&mat_bytes];
+            let mat_u8 = &text_bytes[mat.start().. mat.end()];
+            let mut score = self.token_to_score[mat_u8];
             score += scores[mat.start()];
             if 
                 (alpha <= 0.0 && score > scores[mat.end()]) || 
@@ -155,23 +146,22 @@ impl Tokenizer {
         let mut end = text_bytes.len();
         while end > 0 {
             let start = routes[end];
-            let byte_token = text_bytes[start..end].to_owned();
-            let token = Bytes::from(byte_token);
-            tokens.push(token);
+            let byte_token = &text_bytes[start..end];
+            tokens.push(byte_token);
             end = start;
         }
         tokens.reverse();
         tokens
     }
-    
-    pub fn tokenize(&self, text:  &str, alpha: f64) -> Vec<Bytes> {
-        let text_list = normalize(text);
+
+    pub fn tokenize(&'a self, text: &str, alpha: f64) -> Vec<Vec<u8>> {
+        let text = text.nfc().collect::<String>();
+        let text_list = normalize(&text);
         let mut tokens = vec![];
         for p in text_list {
-            let part = Bytes::from(p);
-            let token_bytes = self.tokenize_bytes(part, alpha);
+            let token_bytes = self.tokenize_bytes(p.as_bytes(), alpha);
             for token_byte in token_bytes {
-                tokens.push(token_byte);
+                tokens.push(token_byte.to_owned());
             }
         }
         tokens
@@ -196,13 +186,13 @@ impl Tokenizer {
     }
 
     pub fn decode(&self, token_ids: Vec<usize>) -> String {
-        let tokens = token_ids
+        let tokens: Vec<Vec<u8>> = token_ids
             .iter()
             .map(|&x| self.id_to_tokens[&x].clone())
-            .collect::<Vec<Bytes>>();
+            .collect();
         let mut text = String::new();
         for token in tokens {
-            match str::from_utf8(token.as_ref()) {
+            match str::from_utf8(&token) {
                 Ok(v) => text.push_str(v),
                 Err(_e) => continue,
             }

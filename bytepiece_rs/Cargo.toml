@@ -1,6 +1,6 @@
 [package]
 name = "bytepiece_rs"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 authors = ["hscspring <haoshaochun@gmail.com>"]
 categories = ["text-processing", "deeplearning", "nlp"]
@@ -19,7 +19,6 @@ gnuplot = "0.0.39"
 [dependencies]
 aho-corasick = "1.0.5"
 base64 = "0.21.4"
-bytes = "1.5.0"
 lazy_static = "1.4.0"
 rand = "0.8.5"
 regex = "1.9.5"
