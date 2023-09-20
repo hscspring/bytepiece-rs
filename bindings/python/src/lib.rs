@@ -10,6 +10,7 @@ struct Tokenizer {
 #[pymethods]
 impl Tokenizer {
     #[new]
+    #[pyo3[signature = (model_path="")]]
     fn new(model_path: &str) -> Self {
         match model_path {
             "" => Self {
@@ -21,14 +22,14 @@ impl Tokenizer {
         }
     }
 
-    #[pyo3(text_signature = "($self, text, add_bos, add_eos, alpha)")]
+    #[pyo3(signature = (text, add_bos=false, add_eos=false, alpha=0.0))]
     fn encode<'a>(
         &self, py: Python, text: &'a str, add_bos: bool, add_eos: bool, alpha: f64
     ) -> Vec<usize> {
         py.allow_threads(move || self.tokenizer.encode(text, add_bos, add_eos, alpha))
     }
 
-    #[pyo3(text_signature = "($self, token_ids)")]
+    #[pyo3(signature = (token_ids))]
     fn decode<'a>(&self, py: Python, token_ids: Vec<usize>) -> String {
         py.allow_threads(move || self.tokenizer.decode(token_ids))
     }
