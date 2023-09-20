@@ -33,12 +33,13 @@ pub fn chunk(text: &str) -> Vec<&str>  {
     RE.find_iter(text).map(|mat| mat.as_str()).collect()
 }
 
+#[inline(always)]
 pub fn random() -> f64 {
     let mut rng = rand::thread_rng();
     rng.gen::<f64>()
 }
 
-
+#[inline(always)]
 pub fn sigmoid(x: f64) -> f64 {
     if x >= 0.0 {
         1.0 / (1.0 + (-x).exp())
@@ -130,15 +131,17 @@ impl<'a> Tokenizer {
         scores[0] = 0.0;
         let mut routes: Vec<usize> = (0..len).collect();
         for mat in self.automaton.as_ref().unwrap().find_overlapping_iter(text_bytes.as_ref()) {
-            let mat_u8 = &text_bytes[mat.start().. mat.end()];
+            let end = mat.end();
+            let start = mat.start();
+            let mat_u8 = &text_bytes[start..end];
             let mut score = self.token_to_score[mat_u8];
-            score += scores[mat.start()];
+            score += scores[start];
             if 
-                (alpha <= 0.0 && score > scores[mat.end()]) || 
-                (alpha > 0.0 && random() < sigmoid((score - scores[mat.end()]) * alpha))
+                (alpha <= 0.0 && score > scores[end]) || 
+                (alpha > 0.0 && random() < sigmoid((score - scores[end]) * alpha))
             {
-                scores[mat.end()] = score;
-                routes[mat.end()] = mat.start();
+                scores[end] = score;
+                routes[end] = start;
             }
         }
         let mut end = len - 1;
@@ -167,8 +170,8 @@ impl<'a> Tokenizer {
         let mut token_ids = vec![];
         for p in text_list {
             let token_bytes = self.tokenize_bytes(p.as_bytes(), alpha);
-            for &x in token_bytes.iter() {
-                token_ids.push(self.token_to_ids[x]);
+            for &bt in token_bytes.iter() {
+                token_ids.push(self.token_to_ids[bt]);
             }
         }
         token_ids

@@ -12,6 +12,8 @@ pip install rs_bytepiece
 from rs_bytepiece import Tokenizer
 
 tokenizer = Tokenizer()
+# a custom model
+tokenizer = Tokenizer("/path/to/model")
 ids = tokenizer.encode("今天天气不错")
 text = tokenizer.decode(ids)
 ```
