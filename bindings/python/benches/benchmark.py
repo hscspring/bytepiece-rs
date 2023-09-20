@@ -67,7 +67,7 @@ def run_tk_rs():
 for total in [100, 1000, 10000, 100000, 1000000]:
     test_text = text[:total]
     _len = len(test_text)
-    print(f"Text length: {_len}")
+    print(f"\nText length: {_len}")
     # ids0 = run_tk_jieba()
     ids1 = run_tk_aho_py()
     ids2 = run_tk_aho_cy()

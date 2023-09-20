@@ -22,11 +22,11 @@ impl Tokenizer {
         }
     }
 
-    #[pyo3(signature = (text, add_bos=false, add_eos=false, alpha=0.0))]
+    #[pyo3(signature = (text, add_bos=false, add_eos=false, alpha=0.0, norm=true))]
     fn encode<'a>(
-        &self, py: Python, text: &'a str, add_bos: bool, add_eos: bool, alpha: f64
+        &self, py: Python, text: &'a str, add_bos: bool, add_eos: bool, alpha: f64, norm: bool
     ) -> Vec<usize> {
-        py.allow_threads(move || self.tokenizer.encode(text, add_bos, add_eos, alpha))
+        py.allow_threads(move || self.tokenizer.encode(text, add_bos, add_eos, alpha, norm))
     }
 
     #[pyo3(signature = (token_ids))]
