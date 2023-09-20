@@ -19,14 +19,14 @@ type Token2ScoreMap = HashMap<Vec<u8>, f64>;
 static DEFAULT_MODEL: &str = include_str!("model/bytepiece_80k.model");
 
 
-pub fn load_model(path: &str) -> String {
+fn load_model(path: &str) -> String {
     let file = File::open(path).unwrap();
     let json: serde_json::Value = serde_json::from_reader(file).unwrap();
     json.to_string()
 }
 
 
-pub fn normalize(text: &str) -> Vec<&str>  {
+pub fn chunk(text: &str) -> Vec<&str>  {
     lazy_static! {
         static ref RE: Regex = Regex::new(r".*\n+|.+").unwrap();
     }
@@ -67,7 +67,7 @@ struct ModelData {
 
 impl<'a> Tokenizer {
 
-    pub fn init_empty() -> Self {
+    fn init_empty() -> Self {
         Tokenizer {
             token_to_ids: TokenMap::new(),
             id_to_tokens: IdMap::new(),
@@ -152,9 +152,18 @@ impl<'a> Tokenizer {
         tokens
     }
 
-    pub fn tokenize(&'a self, text: &str, alpha: f64) -> Vec<usize> {
-        let text = text.nfc().collect::<String>();
-        let text_list = normalize(&text);
+    pub fn tokenize(&self, text: &str, alpha: f64, norm: bool) -> Vec<usize> {
+        match norm {
+            true => {
+                let norm_text = text.nfc().collect::<String>();
+                self._tokenize(&norm_text, alpha)
+            }
+            false => self._tokenize(text, alpha)
+        }
+    }
+
+    fn _tokenize(&'a self, text: &str, alpha: f64) -> Vec<usize> {
+        let text_list = chunk(text);
         let mut token_ids = vec![];
         for p in text_list {
             let token_bytes = self.tokenize_bytes(p.as_bytes(), alpha);
@@ -166,9 +175,9 @@ impl<'a> Tokenizer {
     }
 
     pub fn encode(
-        &self, text: &str, add_bos: bool, add_eos: bool, alpha: f64,
+        &self, text: &str, add_bos: bool, add_eos: bool, alpha: f64, norm: bool,
     ) -> Vec<usize> {
-        let mut token_ids = self.tokenize(text, alpha);
+        let mut token_ids = self.tokenize(text, alpha, norm);
         if add_bos {
             token_ids.insert(0, 1);
         }
@@ -203,12 +212,16 @@ mod tests {
     fn test_default_model() {
         let tokenizer = Tokenizer::new();
         let text = "今天天气不错";
-        let ids = tokenizer.encode(text, false, false, 0.0);
+        let ids = tokenizer.encode(
+            text, false, false, 0.0, false
+        );
         assert_eq!(ids, vec![40496, 45268, 39432]);
         let text2 = tokenizer.decode(ids);
         assert_eq!(text2, text);
         let text = "";
-        let ids = tokenizer.encode(text, false, false, 0.0);
+        let ids = tokenizer.encode(
+            text, false, false, 0.0, false
+        );
         assert_eq!(ids.len(), 0);
     }
 
@@ -218,20 +231,22 @@ mod tests {
         let model_path = current_dir.join("src/tokenizer/model/bytepiece_80k.model");
         let tokenizer = Tokenizer::load_from(model_path.to_str().unwrap());
         let text = "今天天气不错";
-        let ids = tokenizer.encode(text, false, false, 0.0);
+        let ids = tokenizer.encode(
+            text, false, false, 0.0, false
+        );
         assert_eq!(ids, vec![40496, 45268, 39432]);
     }
 
     #[test]
-    fn test_normalize() {
+    fn test_chunk() {
         let text = "今天天气不错";
-        let text_list = normalize(text);
+        let text_list = chunk(text);
         assert_eq!(text_list, vec!["今天天气不错"]);
         let text2 = "今天天气不错\n";
-        let text_list2 = normalize(text2);
+        let text_list2 = chunk(text2);
         assert_eq!(text_list2, vec!["今天天气不错\n"]);
         let text3 = "今天天气不错\n今天天气不错";
-        let text_list3 = normalize(text3);
+        let text_list3 = chunk(text3);
         assert_eq!(text_list3, vec!["今天天气不错\n", "今天天气不错"]);
     }
 
@@ -239,11 +254,11 @@ mod tests {
     fn test_tokenize() {
         let tokenizer = Tokenizer::new();
         let text = "今天天气不错";
-        let tokens = tokenizer.tokenize(text, 0.0);
+        let tokens = tokenizer.tokenize(text, 0.0, false);
         assert_eq!(tokens.len(), 3);
-        let tokens = tokenizer.tokenize(text, -1.0);
+        let tokens = tokenizer.tokenize(text, -1.0, false);
         assert_eq!(tokens.len(), 3);
-        let tokens = tokenizer.tokenize(text, 0.1);
+        let tokens = tokenizer.tokenize(text, 0.1, false);
         assert_eq!(tokens.len() >= 3, true);
     }
 

@@ -22,7 +22,9 @@ fn criterion_benchmark(c: &mut Criterion) {
                 format!("size={}, alpha={}", size, alpha), &(text, alpha), 
                 |b, (text, &alpha)| {
                 b.iter(|| {
-                    let _ids = BYTEPIECE.encode(&text, false, false, alpha);
+                    let _ids = BYTEPIECE.encode(
+                        &text, false, false, alpha, false
+                    );
                 })
             });
         }
