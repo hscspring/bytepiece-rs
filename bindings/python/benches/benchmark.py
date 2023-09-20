@@ -68,13 +68,13 @@ for total in [100, 1000, 10000, 100000, 1000000]:
     test_text = text[:total]
     _len = len(test_text)
     print(f"Text length: {_len}")
-    ids0 = run_tk_jieba()
+    # ids0 = run_tk_jieba()
     ids1 = run_tk_aho_py()
     ids2 = run_tk_aho_cy()
     ids3 = run_tk_rs()
 
-    assert len(ids0) == len(ids1) == len(ids2) == len(ids3)
+    assert len(ids1) == len(ids2) == len(ids3)
     for i in range(len(ids1)):
-        if ids0[i] == ids1[i] == ids2[i] == ids3[i]:
+        if ids1[i] == ids2[i] == ids3[i]:
             continue
         print(i)

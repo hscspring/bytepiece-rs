@@ -15,4 +15,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.19.2", features = ["extension-module", "abi3-py37"] }
-bytepiece_rs = "0.0.2"
+bytepiece_rs = "0.0.3"
