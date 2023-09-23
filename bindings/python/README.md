@@ -20,7 +20,7 @@ text = tokenizer.decode(ids)
 
 ## Performance
 
-The performance is a bit faster than the original implementation. I've tested the《鲁迅全集》which has 625890 chars. The time unit is millisecond.
+The performance is a bit faster than the original implementation. I've tested (on my M2 16G) the《鲁迅全集》which has 625890 chars. The time unit is millisecond.
 
 | length | jieba    | aho_py  | aho_cy | aho_rs |
 | ------ | -------- | ------- | ------ | ------ |

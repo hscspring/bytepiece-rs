@@ -22,7 +22,7 @@ assert_eq!(text2, text);
 cargo bench -- --plotting-backend gnuplot
 ```
 
-The result as follows:
+The result as follows (tested on my M2 16G): 
 
 | TextLength | alpha | v0.0.2 | v0.0.3 | v0.0.4 |
 | ------------ | ----- | ----------- | ----------- | ----------- |
@@ -34,4 +34,3 @@ The result as follows:
 |              | 0.1   | 10.811 ms   | 6.7284 ms | 5.8504 ms |
 | 100000       | 0.0   | 85.445 ms   | 51.324 ms | 42.54 ms |
 |              | 0.1   | 110.75 ms   | 68.991 ms | 59.018 ms |
-
