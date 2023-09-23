@@ -2,6 +2,8 @@
 
 Implementation of Su's [bytepiece](https://github.com/bojone/bytepiece).
 
+Bytepiece is a new tokenize method, which uses UTF-8 Byte as unigram to process text. It needs little preprocessing,  more pure and language independent.
+
 
 ## Bindings
 
