@@ -28,7 +28,7 @@ fn load_model(path: &str) -> String {
 }
 
 
-pub fn chunk(text: &str) -> Vec<&str>  {
+pub fn chunk(text: &str) -> Vec<&str> {
     lazy_static! {
         static ref RE: Regex = Regex::new(r".*\n+|.+").unwrap();
     }
@@ -171,11 +171,19 @@ impl<'a> Tokenizer {
     fn _tokenize(&'a self, text: &str, alpha: f64) -> Vec<usize> {
         let text_list = chunk(text);
         let mut token_ids = vec![];
-        for p in text_list {
-            let p_ids = self.tokenize_bytes(p.as_bytes(), alpha);
-            token_ids.extend(p_ids);
+        if text_list.len() > 1 && text.len() > 512 {
+            let x = text_list.into_par_iter().map(|p| {
+                let p_ids = self.tokenize_bytes(p.as_bytes(), alpha);
+                p_ids
+            });
+            x.collect_into_vec(&mut token_ids);
+        } else {
+            for p in text_list {
+                let p_ids = self.tokenize_bytes(p.as_bytes(), alpha);
+                token_ids.push(p_ids);
+            }
         }
-        token_ids
+        token_ids.concat()
     }
 
     pub fn encode(
