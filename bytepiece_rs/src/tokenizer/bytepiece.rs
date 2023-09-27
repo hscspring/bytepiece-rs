@@ -9,6 +9,8 @@ use base64::{Engine as _, engine::general_purpose};
 use serde_json;
 use serde::Deserialize;
 use serde_json::Result;
+use rayon::prelude::*;
+
 
 
 type TokenMap = HashMap<Vec<u8>, usize>;
@@ -33,11 +35,13 @@ pub fn chunk(text: &str) -> Vec<&str>  {
     RE.find_iter(text).map(|mat| mat.as_str()).collect()
 }
 
+
 #[inline(always)]
 pub fn random() -> f64 {
     let mut rng = rand::thread_rng();
     rng.gen::<f64>()
 }
+
 
 #[inline(always)]
 pub fn sigmoid(x: f64) -> f64 {
@@ -109,7 +113,7 @@ impl<'a> Tokenizer {
             total_freq += value.freq;
         }
         let log_total = (total_freq as f64).ln();
-        for (_key, value) in self.token_to_score.iter_mut() {
+        for value in self.token_to_score.values_mut() {
             *value -= log_total;
         }
 
@@ -124,35 +128,34 @@ impl<'a> Tokenizer {
         Ok(())
     }
 
-    fn tokenize_bytes(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<&'a [u8]> {
-        let mut tokens = vec![];
+    fn tokenize_bytes(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<usize> {
         let len = text_bytes.len() + 1;
         let mut scores: Vec<f64> = vec![NEG_INFINITY; len];
         scores[0] = 0.0;
+        let automaton = self.automaton.as_ref().unwrap(); 
         let mut routes: Vec<usize> = (0..len).collect();
-        for mat in self.automaton.as_ref().unwrap().find_overlapping_iter(text_bytes.as_ref()) {
+        for mat in automaton.find_overlapping_iter(text_bytes.as_ref()) {
             let end = mat.end();
             let start = mat.start();
             let mat_u8 = &text_bytes[start..end];
-            let mut score = self.token_to_score[mat_u8];
-            score += scores[start];
-            if 
-                (alpha <= 0.0 && score > scores[end]) || 
+            let score = self.token_to_score[mat_u8] + scores[start];
+            if (alpha <= 0.0 && score > scores[end]) || 
                 (alpha > 0.0 && random() < sigmoid((score - scores[end]) * alpha))
             {
                 scores[end] = score;
                 routes[end] = start;
             }
         }
+        let mut token_ids = vec![];
         let mut end = len - 1;
         while end > 0 {
             let start = routes[end];
             let byte_token = &text_bytes[start..end];
-            tokens.push(byte_token);
+            token_ids.push(self.token_to_ids[byte_token]);
             end = start;
         }
-        tokens.reverse();
-        tokens
+        token_ids.reverse();
+        token_ids
     }
 
     pub fn tokenize(&self, text: &str, alpha: f64, norm: bool) -> Vec<usize> {
@@ -169,10 +172,8 @@ impl<'a> Tokenizer {
         let text_list = chunk(text);
         let mut token_ids = vec![];
         for p in text_list {
-            let token_bytes = self.tokenize_bytes(p.as_bytes(), alpha);
-            for &bt in token_bytes.iter() {
-                token_ids.push(self.token_to_ids[bt]);
-            }
+            let p_ids = self.tokenize_bytes(p.as_bytes(), alpha);
+            token_ids.extend(p_ids);
         }
         token_ids
     }

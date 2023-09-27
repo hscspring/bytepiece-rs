@@ -1,6 +1,6 @@
 [package]
 name = "rs_bytepiece"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Yam(长琴) <haoshaochun@gmail.com>"]
 description = "bytepiece-rs Python binding"
@@ -15,4 +15,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.19.2", features = ["extension-module", "abi3-py37", "generate-import-lib"] }
-bytepiece_rs = "0.1.0"
+bytepiece_rs = {path = "../../bytepiece_rs/"}
