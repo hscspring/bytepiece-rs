@@ -22,7 +22,7 @@ impl Tokenizer {
         }
     }
 
-    #[pyo3(signature = (text, add_bos=false, add_eos=false, alpha=0.0, norm=true))]
+    #[pyo3(signature = (text, add_bos=false, add_eos=false, alpha=-1.0, norm=true))]
     fn encode<'a>(
         &self, py: Python, text: &'a str, add_bos: bool, add_eos: bool, alpha: f64, norm: bool
     ) -> Vec<usize> {

@@ -1,6 +1,6 @@
 [package]
 name = "rs_bytepiece"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["Yam(长琴) <haoshaochun@gmail.com>"]
 description = "bytepiece-rs Python binding"
