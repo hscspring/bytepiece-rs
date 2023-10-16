@@ -1,6 +1,6 @@
 [package]
 name = "bytepiece_rs"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["hscspring <haoshaochun@gmail.com>"]
 categories = ["text-processing", "deeplearning", "nlp"]

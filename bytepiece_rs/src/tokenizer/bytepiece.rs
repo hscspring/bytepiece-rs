@@ -44,11 +44,25 @@ pub fn random() -> f64 {
 
 
 #[inline(always)]
-pub fn sigmoid(x: f64) -> f64 {
+pub fn _sigmoid(x: f64) -> f64 {
     if x >= 0.0 {
         1.0 / (1.0 + (-x).exp())
     } else {
         1.0 - 1.0 / (1.0 + x.exp())
+    }
+}
+
+
+#[inline(always)]
+pub fn logsumexp(x: f64, y: f64) -> f64 {
+    if x == NEG_INFINITY {
+        y
+    } else if y == NEG_INFINITY {
+        x
+    } else if x > y {
+        x + (1.0 + (y - x).exp()).ln()
+    } else {
+        y + (1.0 + (x - y).exp()).ln()
     }
 }
 
@@ -129,6 +143,46 @@ impl<'a> Tokenizer {
     }
 
     fn tokenize_bytes(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<usize> {
+        if alpha < 0.0 {
+            self.viterbi_decode(text_bytes)
+        } else {
+            self.viterbi_sample(text_bytes, alpha)
+        }
+    }
+
+    fn viterbi_sample(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<usize> {
+        let len = text_bytes.len() + 1;
+        let mut scores: Vec<f64> = vec![NEG_INFINITY; len];
+        let mut logsumexp_scores: Vec<f64> = vec![NEG_INFINITY; len];
+        scores[0] = 0.0;
+        logsumexp_scores[0] = 0.0;
+        let automaton = self.automaton.as_ref().unwrap(); 
+        let mut routes: Vec<usize> = (0..len).collect();
+        for mat in automaton.find_overlapping_iter(text_bytes.as_ref()) {
+            let end = mat.end();
+            let start = mat.start();
+            let mat_u8 = &text_bytes[start..end];
+            let score = self.token_to_score[mat_u8] * alpha + scores[start];
+            let lse_score = logsumexp(scores[end], score);
+            scores[end] = lse_score;
+            if random() < (score - lse_score).exp() {
+                scores[end] = score;
+                routes[end] = start;
+            }
+        }
+        let mut token_ids = vec![];
+        let mut end = len - 1;
+        while end > 0 {
+            let start = routes[end];
+            let byte_token = &text_bytes[start..end];
+            token_ids.push(self.token_to_ids[byte_token]);
+            end = start;
+        }
+        token_ids.reverse();
+        token_ids
+    }
+
+    fn viterbi_decode(&'a self, text_bytes: &'a [u8]) -> Vec<usize> {
         let len = text_bytes.len() + 1;
         let mut scores: Vec<f64> = vec![NEG_INFINITY; len];
         scores[0] = 0.0;
@@ -139,9 +193,7 @@ impl<'a> Tokenizer {
             let start = mat.start();
             let mat_u8 = &text_bytes[start..end];
             let score = self.token_to_score[mat_u8] + scores[start];
-            if (alpha <= 0.0 && score > scores[end]) || 
-                (alpha > 0.0 && random() < sigmoid((score - scores[end]) * alpha))
-            {
+            if score > scores[end] {
                 scores[end] = score;
                 routes[end] = start;
             }
@@ -171,7 +223,7 @@ impl<'a> Tokenizer {
     fn _tokenize(&'a self, text: &str, alpha: f64) -> Vec<usize> {
         let text_list = chunk(text);
         let mut token_ids = vec![];
-        if text_list.len() > 1 && text.len() > 512 {
+        if text_list.len() > 1 && text.len() > 2048 {
             let x = text_list.into_par_iter().map(|p| {
                 let p_ids = self.tokenize_bytes(p.as_bytes(), alpha);
                 p_ids
@@ -225,14 +277,14 @@ mod tests {
         let tokenizer = Tokenizer::new();
         let text = "今天天气不错";
         let ids = tokenizer.encode(
-            text, false, false, 0.0, false
+            text, false, false, -1.0, false
         );
         assert_eq!(ids, vec![40496, 45268, 39432]);
         let text2 = tokenizer.decode(ids);
         assert_eq!(text2, text);
         let text = "";
         let ids = tokenizer.encode(
-            text, false, false, 0.0, false
+            text, false, false, -1.0, false
         );
         assert_eq!(ids.len(), 0);
     }
@@ -244,7 +296,7 @@ mod tests {
         let tokenizer = Tokenizer::load_from(model_path.to_str().unwrap());
         let text = "今天天气不错";
         let ids = tokenizer.encode(
-            text, false, false, 0.0, false
+            text, false, false, -1.0, false
         );
         assert_eq!(ids, vec![40496, 45268, 39432]);
     }
@@ -267,9 +319,13 @@ mod tests {
         let tokenizer = Tokenizer::new();
         let text = "今天天气不错";
         let tokens = tokenizer.tokenize(text, 0.0, false);
-        assert_eq!(tokens.len(), 3);
+        assert_eq!(tokens.len() >= 3, true);
         let tokens = tokenizer.tokenize(text, -1.0, false);
         assert_eq!(tokens.len(), 3);
+        let tokens = tokenizer.tokenize(text, 1.0, false);
+        assert_eq!(tokens.len() == 3, true);
+        let tokens = tokenizer.tokenize(text, 3.0, false);
+        assert_eq!(tokens.len() == 3, true);
         let tokens = tokenizer.tokenize(text, 0.1, false);
         assert_eq!(tokens.len() >= 3, true);
     }
@@ -280,17 +336,38 @@ mod tests {
             #[test]
             fn $name() {
                 let (input, expected) = $value;
-                let res = expected - sigmoid(input);
+                let res = expected - _sigmoid(input);
                 assert_eq!(res.abs() < 1e-2, true);
             }
-        )*
-        }
+        )*}
     }
 
     sigmoid_test! {
         sigmoid_0: (0.0, 0.5),
         sigmoid_1: (1.0, 0.731),
         sigmoid_2: (-1.0, 0.269),
+    }
+
+    macro_rules! logsumexp_test {
+        ($($name:ident: $value:expr,)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let (x, y, expected) = $value;
+                let res = expected - logsumexp(x, y);
+                assert_eq!(res.abs() < 1e-2, true);
+            }
+        )*}
+    }
+
+    logsumexp_test! {
+        logsumexp_0: (0.0, 0.0, 0.693),
+        logsumexp_1: (2.0, 1.0, 2.313),
+        logsumexp_2: (1.0, 2.0, 2.313),
+        logsumexp_3: (-1.0, -3.0, -0.873),
+        logsumexp_4: (-3.0, -1.0, -0.873),
+        logsumexp_5: (NEG_INFINITY, 1.0, 1.0),
+        logsumexp_6: (1.0, NEG_INFINITY, 1.0),
     }
 
     #[test]
