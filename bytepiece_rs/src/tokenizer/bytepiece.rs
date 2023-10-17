@@ -143,46 +143,6 @@ impl<'a> Tokenizer {
     }
 
     fn tokenize_bytes(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<usize> {
-        if alpha < 0.0 {
-            self.viterbi_decode(text_bytes)
-        } else {
-            self.viterbi_sample(text_bytes, alpha)
-        }
-    }
-
-    fn viterbi_sample(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<usize> {
-        let len = text_bytes.len() + 1;
-        let mut scores: Vec<f64> = vec![NEG_INFINITY; len];
-        let mut logsumexp_scores: Vec<f64> = vec![NEG_INFINITY; len];
-        scores[0] = 0.0;
-        logsumexp_scores[0] = 0.0;
-        let automaton = self.automaton.as_ref().unwrap(); 
-        let mut routes: Vec<usize> = (0..len).collect();
-        for mat in automaton.find_overlapping_iter(text_bytes.as_ref()) {
-            let end = mat.end();
-            let start = mat.start();
-            let mat_u8 = &text_bytes[start..end];
-            let score = self.token_to_score[mat_u8] * alpha + scores[start];
-            let lse_score = logsumexp(scores[end], score);
-            scores[end] = lse_score;
-            if random() < (score - lse_score).exp() {
-                scores[end] = score;
-                routes[end] = start;
-            }
-        }
-        let mut token_ids = vec![];
-        let mut end = len - 1;
-        while end > 0 {
-            let start = routes[end];
-            let byte_token = &text_bytes[start..end];
-            token_ids.push(self.token_to_ids[byte_token]);
-            end = start;
-        }
-        token_ids.reverse();
-        token_ids
-    }
-
-    fn viterbi_decode(&'a self, text_bytes: &'a [u8]) -> Vec<usize> {
         let len = text_bytes.len() + 1;
         let mut scores: Vec<f64> = vec![NEG_INFINITY; len];
         scores[0] = 0.0;
@@ -192,10 +152,20 @@ impl<'a> Tokenizer {
             let end = mat.end();
             let start = mat.start();
             let mat_u8 = &text_bytes[start..end];
-            let score = self.token_to_score[mat_u8] + scores[start];
-            if score > scores[end] {
-                scores[end] = score;
-                routes[end] = start;
+            let mat_score = self.token_to_score[mat_u8];
+            if alpha < 0.0 {
+                let score = scores[start] + mat_score;
+                if score > scores[end] {
+                    scores[end] = score;
+                    routes[end] = start;
+                }
+            } else {
+                let score = scores[start] + alpha * mat_score;
+                let lse_score = logsumexp(scores[end], score);
+                scores[end] = lse_score;
+                if random() < (score - lse_score).exp() {
+                    routes[end] = start;
+                }
             }
         }
         let mut token_ids = vec![];
