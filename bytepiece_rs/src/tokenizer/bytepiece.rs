@@ -1,6 +1,6 @@
 use std::{fs::File, collections::HashMap, f64::NEG_INFINITY, str};
 
-use rand::Rng;
+use seeded_random::{Random, Seed};
 use unic_normal::StrNormalForm;
 use regex::Regex;
 use lazy_static::lazy_static;
@@ -10,7 +10,6 @@ use serde_json;
 use serde::Deserialize;
 use serde_json::Result;
 use rayon::prelude::*;
-
 
 
 type TokenMap = HashMap<Vec<u8>, usize>;
@@ -33,13 +32,6 @@ pub fn chunk(text: &str) -> Vec<&str> {
         static ref RE: Regex = Regex::new(r".*\n+|.+").unwrap();
     }
     RE.find_iter(text).map(|mat| mat.as_str()).collect()
-}
-
-
-#[inline(always)]
-pub fn random() -> f64 {
-    let mut rng = rand::thread_rng();
-    rng.gen::<f64>()
 }
 
 
@@ -73,6 +65,7 @@ pub struct Tokenizer {
     id_to_tokens: IdMap,
     token_to_score: Token2ScoreMap,
     automaton: Option<AhoCorasick>,
+    rng: Random,
 }
 
 
@@ -92,6 +85,7 @@ impl<'a> Tokenizer {
             id_to_tokens: IdMap::new(),
             token_to_score: Token2ScoreMap::new(),
             automaton: None,
+            rng: Random::new(),
         }
     }
 
@@ -141,6 +135,16 @@ impl<'a> Tokenizer {
 
         Ok(())
     }
+    
+    pub fn set_seed(& mut self, seed: u64) {
+        let _seed = Seed::unsafe_new(seed);
+        self.rng = Random::from_seed(_seed);
+    }
+
+    pub fn choose(&self, x: f64, y: f64) -> bool {
+        let random_number = self.rng.u32();
+        (random_number as f64) < (x - y).exp() * (u32::MAX as f64)
+    }
 
     fn tokenize_bytes(&'a self, text_bytes: &'a [u8], alpha: f64) -> Vec<usize> {
         let len = text_bytes.len() + 1;
@@ -163,7 +167,7 @@ impl<'a> Tokenizer {
                 let score = scores[start] + alpha * mat_score;
                 let lse_score = logsumexp(scores[end], score);
                 scores[end] = lse_score;
-                if random() < (score - lse_score).exp() {
+                if self.choose(score, lse_score) {
                     routes[end] = start;
                 }
             }
@@ -300,6 +304,23 @@ mod tests {
         assert_eq!(tokens.len() >= 3, true);
     }
 
+    #[test]
+    fn test_tokenize_choose() {
+        let tokenizer = Tokenizer::new();
+        assert!(tokenizer.choose(2.0, 1.0));
+    }
+
+    #[test]
+    fn test_seed() {
+        let mut tk1 = Tokenizer::new();
+        let mut tk2 = Tokenizer::new();
+        assert_ne!(tk1.rng.u32(), tk2.rng.u32());
+        let seed = 42;
+        tk1.set_seed(seed);
+        tk2.set_seed(seed);
+        assert_eq!(tk1.rng.u32(), tk2.rng.u32());
+    }
+
     macro_rules! sigmoid_test {
         ($($name:ident: $value:expr,)*) => {
         $(
@@ -338,16 +359,5 @@ mod tests {
         logsumexp_4: (-3.0, -1.0, -0.873),
         logsumexp_5: (NEG_INFINITY, 1.0, 1.0),
         logsumexp_6: (1.0, NEG_INFINITY, 1.0),
-    }
-
-    #[test]
-    fn test_random() {
-        loop {
-            let res = random();
-            assert_eq!(res >= 0.0 && res < 1.0, true);
-            if res > 0.2 {
-                break;
-            }
-        }
     }
 }
