@@ -14,6 +14,9 @@ from rs_bytepiece import Tokenizer
 tokenizer = Tokenizer()
 # a custom model
 tokenizer = Tokenizer("/path/to/model")
+# seed
+tokenizer.set_seed(42)
+
 ids = tokenizer.encode("今天天气不错")
 text = tokenizer.decode(ids)
 ```
