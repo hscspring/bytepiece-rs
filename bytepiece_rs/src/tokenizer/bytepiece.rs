@@ -2,13 +2,12 @@ use std::{fs::File, collections::HashMap, f64::NEG_INFINITY, str};
 
 use seeded_random::{Random, Seed};
 use unic_normal::StrNormalForm;
+use base64::{Engine as _, engine::general_purpose};
 use regex::Regex;
 use lazy_static::lazy_static;
 use aho_corasick::{AhoCorasick, AhoCorasickBuilder, MatchKind};
-use base64::{Engine as _, engine::general_purpose};
-use serde_json;
+use serde_json::{self, Result};
 use serde::Deserialize;
-use serde_json::Result;
 use rayon::prelude::*;
 
 
@@ -141,7 +140,7 @@ impl<'a> Tokenizer {
         self.rng = Random::from_seed(_seed);
     }
 
-    pub fn choose(&self, x: f64, y: f64) -> bool {
+    fn choose(&self, x: f64, y: f64) -> bool {
         let random_number = self.rng.u32();
         (random_number as f64) < (x - y).exp() * (u32::MAX as f64)
     }
